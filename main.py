@@ -1,6 +1,4 @@
-import base64
 import os
-import io
 import uuid
 from datetime import date
 from flask_cors import CORS
@@ -12,7 +10,7 @@ from dotenv import load_dotenv
 import certifi
 import ssl
 
-# Use the certifi certificate bundle for SSL verification
+
 ssl_context = ssl.create_default_context(cafile=certifi.where())
 
 app = Flask(__name__)
@@ -23,9 +21,7 @@ openai.api_key = os.getenv("OPENAI_KEY")
 
 email_sender = SendGridAPIClient(os.getenv("SENDGRID_KEY"))
 
-# Define the path to your HTML email template
 email_template_path = 'transcript_email.html'
-# Define the upload folder where audio files will be stored
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
 
