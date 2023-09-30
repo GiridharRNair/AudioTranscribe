@@ -1,6 +1,7 @@
 import base64
 import os
 import io
+import uuid
 from datetime import date
 from flask_cors import CORS
 from flask import Flask, request, jsonify
@@ -27,11 +28,6 @@ email_template_path = 'transcript_email.html'
 # Define the upload folder where audio files will be stored
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
-# Function to check if the file has a valid extension
-def allowed_file(filename):
-    allowed_extensions = {'mp3', 'wav', 'flac', 'ogg'}  # Add more extensions as needed
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
-
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe_and_send_email():
@@ -46,8 +42,9 @@ def transcribe_and_send_email():
 
         # Check if the file has a valid extension (you can add more extensions)
         if file:
-            # Transcribe the audio or video
-            upload_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            # Generate a unique filename using UUID
+            unique_filename = str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower()
+            upload_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
             file.save(upload_path)
 
             # Transcribe the saved audio file
@@ -70,12 +67,12 @@ def transcribe_and_send_email():
 
 def send_email(recipient, summary, transcript):
     subject = f'Transcript - {str(date.today())}'
-    content = summary['abstract_summary'] + summary['key_points'] + summary['action_items'] + summary['sentiment'] + transcript
+    content = f"Summary: {summary['abstract_summary']}\n\nKey Points: {summary['key_points']}\n\nAction Items: {summary['action_items']}\n\nSentiment Analysis: {summary['sentiment']}\n\nTranscript:\n{transcript}"
     message = Mail(
         from_email='yourdailyrundown@gmail.com',
         to_emails=recipient,
         subject=subject,
-        html_content= content
+        plain_text_content=content  # Use plain text content for email
     )
     try:
         response = email_sender.send(message)
@@ -84,8 +81,12 @@ def send_email(recipient, summary, transcript):
         print(f"Failed to send email to {recipient}. Error: {str(e)}")
 
 
+def allowed_file(filename):
+    allowed_extensions = {'mp3', 'wav', 'flac', 'ogg'}  # Add more extensions as needed
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+
 def transcribe(file_path):
-    print('in')
     try:
         # Convert the bytes object to a file-like object
         with open(file_path, 'rb') as audio_file:
