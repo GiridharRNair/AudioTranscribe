@@ -6,13 +6,14 @@ from flask_cors import CORS
 from flask import Flask, request, jsonify
 from sendgrid.helpers.mail import Mail
 from sendgrid import SendGridAPIClient
+from concurrent.futures import ThreadPoolExecutor
 import openai
 from dotenv import load_dotenv
 from pydub import AudioSegment
 
 app = Flask(__name__)
 CORS(app)
-
+executor = ThreadPoolExecutor()
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_KEY")
 
@@ -35,25 +36,50 @@ def transcribe_and_send_email():
         unique_filename = str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower()
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
         file.save(upload_path)
-        full_transcript = transcribe(upload_path)
-        summary = meeting_minutes(full_transcript)
-        send_email(email, summary, full_transcript)
+        executor.submit(process_transcription, upload_path, email)
+
         return jsonify({"message": "Transcription request submitted successfully"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
+def process_transcription(upload_path, email):
+    try:
+        with app.app_context():
+            # Transcribe the audio
+            full_transcript = transcribe(upload_path)
+
+            if not full_transcript:
+                raise Exception("Transcription failed")
+
+            # Generate meeting minutes summary
+            summary = meeting_minutes(full_transcript)
+
+            if not summary:
+                raise Exception("Summary generation failed")
+
+            # Send email
+            send_email(email, summary, full_transcript)
+
+    except Exception as e:
+        # Handle errors appropriately (e.g., log them)
+        print(f"Error in transcription process: {str(e)}")
+
+
 def send_email(recipient, summary, transcript):
+    transcript_summary = f"Summary: \n{summary['abstract_summary']} \n\n"
+    key_points = f"Key Points: \n{summary['key_points']} \n\n"
+    action_items = f"Action Items: \n{summary['action_items']} \n\n"
+    transcript_sentiment_analysis = f"Sentiment Analysis: \n{summary['sentiment']}\n\n"
+    full_transcript = f"Full Transcript:\n{transcript}"
     try:
         subject = f'Transcript - {str(date.today())}'
         message = Mail(
             from_email='talktotextpro@gmail.com',
             to_emails=recipient,
             subject=subject,
-            html_content=f"Summary: {summary['abstract_summary']}\n\n{summary['key_points']}\n"
-                         f"\n{summary['action_items']}\n\nSentiment Analysis: {summary['sentiment']}\n"
-                         f"\nTranscript:\n{transcript}"
+            plain_text_content=transcript_summary+key_points+action_items+transcript_sentiment_analysis+full_transcript
         )
         email_sender.send(message)
         return jsonify({"message": "Transcription successful"}), 200
@@ -180,4 +206,4 @@ def sentiment_analysis(transcription):
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
