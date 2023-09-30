@@ -1,0 +1,91 @@
+!DOCTYPE html>
+<!--suppress ALL -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YourDailyRundown</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #ffffff;
+      border-radius: 5px;
+    }
+    h1 {
+      color: #333;
+    }
+    p {
+      color: #666;
+      line-height: 1.6;
+    }
+    .button {
+      display: inline-block;
+      background-color: rgb(49, 130, 206);
+      color: #ffffff;
+      padding: 5px 10px;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+    .content-border {
+      border-top: 1px solid #ccc;
+      border-bottom: 1px solid #ccc;
+    }
+    .crop {
+      width: 600px;
+      height: 200px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .crop img {
+      width: 600px;
+      height: 300px;
+      margin: 0 auto;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <p>Hey, here is your transcript!</p>
+
+  <div class="content-border">
+    Summary:
+    <br>
+    {{ summary }}
+    <br><br>
+    Key Points:
+    <br>
+    {{ key_points }}
+    <br><br>
+    Action Items:
+    <br>
+    {{ action_items }}
+    <br><br>
+    Sentimental Analysis:
+    <br>
+    {{ analysis }}
+    <br><br>
+    Full Transcript:
+    <br>
+    {{ transcript }}
+  </div>
+
+  <p>Want to transcribe again?</p>
+
+  <p><a class="button" href="<FRONT END PAGE>" style="color:
+#ffffff;">Update Preferences</a></p>
+
+  <p>Best regards,<br />Giridhar Nair<br />TalkToText Developer</p>
+</div>
+</body>
+</html>
