@@ -26,13 +26,13 @@ Once you have these prerequisites, replace the placeholders in your `.env` file 
 1. Clone this repository to your local machine.
 
    ```bash
-   git clone https://github.com/your_username/your_repo.git
+   git clone https://github.com/GiridharRNair/AudioTranscribe.git
    ```
 
 2. Navigate to the project directory.
 
    ```bash
-   cd your_repo
+   cd AudioTranscribe
    ```
 
 3. Create a virtual environment (recommended).
