@@ -6,98 +6,70 @@ from flask_cors import CORS
 from flask import Flask, request, jsonify
 from sendgrid.helpers.mail import Mail
 from sendgrid import SendGridAPIClient
+from concurrent.futures import ThreadPoolExecutor
 import openai
 from dotenv import load_dotenv
 from pydub import AudioSegment
-import logging
 
 app = Flask(__name__)
 CORS(app)
+executor = ThreadPoolExecutor()
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_KEY")
 
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
-
 email_sender = SendGridAPIClient(os.getenv("SENDGRID_KEY"))
-
-ALLOWED_EXTENSIONS = {'mp3', 'mp4', 'mpeg', 'wav', 'flac', 'ogg', 'mpga', 'm4a', 'webm'}
-
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-def handle_error(message, status_code):
-    logger.error(message)
-    return jsonify({"error": message}), status_code
+app.config['UPLOAD_FOLDER'] = 'uploads'
 
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe_and_send_email():
     try:
         email = request.form.get('email')
-        audio_file = request.files.get('audio_file')
+        file = request.files.get('audio_file')
 
-        if not audio_file or not email:
-            return handle_error("Missing required fields", 400)
+        if not file or not email:
+            return jsonify({"error": "Missing required fields"}), 400
 
-        if not allowed_file(audio_file.filename):
-            return handle_error("Invalid File Format", 401)
+        if not allowed_file(file.filename):
+            return jsonify({"error": "Invalid File Format"}), 401
 
-        unique_filename = str(uuid.uuid4()) + '.' + audio_file.filename.rsplit('.', 1)[1].lower()
+        unique_filename = str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower()
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-        audio_file.save(upload_path)
-        process_transcription(upload_path, email)
+        file.save(upload_path)
+
+        full_transcript = transcribe(upload_path)
+        transcription = meeting_minutes(full_transcript)
+        send_email(email, transcription, full_transcript)
 
         return jsonify({"message": "Transcription request submitted successfully"}), 200
 
     except Exception as e:
-        return handle_error(str(e), 500)
+        return jsonify({"error": str(e)}), 500
 
 
-def process_transcription(upload_path, email):
-    try:
-        full_transcript = transcribe(upload_path)
-
-        if not full_transcript:
-            raise Exception("Transcription failed")
-
-        summary = meeting_minutes(full_transcript)
-
-        if not summary:
-            raise Exception("Summary generation failed")
-
-        send_email(email, summary, full_transcript)
-
-    except Exception as e:
-        logger.error(f"Error in transcription process: {str(e)}")
-
-
-def send_email(recipient, summary, transcript):
+def send_email(recipient, transcription_info, transcript):
+    transcript_summary = f"Summary: \n{transcription_info['abstract_summary']} \n\n"
+    key_points = f"Key Points: \n{transcription_info['key_points']} \n\n"
+    action_items = f"Action Items: \n{transcription_info['action_items']} \n\n"
+    transcript_sentiment_analysis = f"Sentiment Analysis: \n{transcription_info['sentiment']}\n\n"
+    full_transcript = f"Full Transcript:\n{transcript}"
     try:
         subject = f'Transcript - {str(date.today())}'
-        message_content = (
-            f"Summary: \n{summary['abstract_summary']} \n\n"
-            f"Key Points: \n{summary['key_points']} \n\n"
-            f"Action Items: \n{summary['action_items']} \n\n"
-            f"Sentiment Analysis: \n{summary['sentiment']}\n\n"
-            f"Full Transcript:\n{transcript}"
-        )
-
         message = Mail(
             from_email='talktotextpro@gmail.com',
             to_emails=recipient,
             subject=subject,
-            plain_text_content=message_content
+            plain_text_content=transcript_summary+key_points+action_items+transcript_sentiment_analysis+full_transcript
         )
         email_sender.send(message)
         return jsonify({"message": "Transcription successful"}), 200
     except Exception as e:
-        return handle_error(str(e), 500)
+        return jsonify({"error": str(e)}), 500
+
+
+def allowed_file(filename):
+    allowed_extensions = {'mp3', 'mp4', 'mpeg', 'wav', 'flac', 'ogg', 'mpga', 'm4a', 'webm'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
 
 def transcribe(file_path):
@@ -130,8 +102,7 @@ def transcribe(file_path):
             return full_transcript
 
     except Exception as e:
-        logger.error(str(e))
-        return None
+        return jsonify({"error": str(e)}), 500
 
 
 def meeting_minutes(transcription):
@@ -215,4 +186,4 @@ def sentiment_analysis(transcription):
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
