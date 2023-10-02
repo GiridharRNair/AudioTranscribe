@@ -20,7 +20,10 @@ load_dotenv()
 openai.api_key = os.getenv("OPENAI_KEY")
 
 email_sender = SendGridAPIClient(os.getenv("SENDGRID_KEY"))
-application.config['UPLOAD_FOLDER'] = 'uploads'
+
+upload_folder = 'uploads'
+os.makedirs(upload_folder, exist_ok=True)
+application.config['UPLOAD_FOLDER'] = upload_folder
 
 limiter = Limiter(
     get_remote_address,
