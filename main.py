@@ -13,24 +13,24 @@ from flask_limiter import Limiter
 import openai
 from dotenv import load_dotenv
 
-app = Flask(__name__)
-CORS(app)
+application = Flask(__name__)
+CORS(application)
 executor = ThreadPoolExecutor()
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_KEY")
 
 email_sender = SendGridAPIClient(os.getenv("SENDGRID_KEY"))
-app.config['UPLOAD_FOLDER'] = 'uploads'
+application.config['UPLOAD_FOLDER'] = 'uploads'
 
 limiter = Limiter(
     get_remote_address,
-    app=app,
+    app=application,
     default_limits=["5 per minute"],
     storage_uri="memory://",
 )
 
 
-@app.route("/transcribe", methods=["POST"])
+@application.route("/transcribe", methods=["POST"])
 def transcribe_and_send_email():
     try:
         email = request.form.get('email')
@@ -43,7 +43,7 @@ def transcribe_and_send_email():
             return jsonify({"error": "Invalid File Format"}), 401
 
         unique_filename = str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower()
-        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        upload_path = os.path.join(application.config['UPLOAD_FOLDER'], unique_filename)
         file.save(upload_path)
 
         executor.submit(process_transcription, upload_path, email)
@@ -54,14 +54,14 @@ def transcribe_and_send_email():
         return jsonify({"error": str(e)}), 500
 
 
-@app.errorhandler(429)
+@application.errorhandler(429)
 def ratelimit_handler(e):
     return jsonify({"error": str(e)}), 429
 
 
 def process_transcription(upload_path, email):
     try:
-        with app.app_context():
+        with application.app_context():
             full_transcript = transcribe(upload_path)
 
             if not full_transcript:
@@ -216,4 +216,4 @@ def sentiment_analysis(transcription):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    application.run(debug=True)
