@@ -1,15 +1,17 @@
 import os
 import uuid
+from pydub import AudioSegment
 import tempfile
-from datetime import date
-from flask_cors import CORS
 from flask import Flask, request, jsonify
-from sendgrid.helpers.mail import Mail
+from flask_cors import CORS
+from datetime import date
 from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 from concurrent.futures import ThreadPoolExecutor
+from flask_limiter.util import get_remote_address
+from flask_limiter import Limiter
 import openai
 from dotenv import load_dotenv
-from pydub import AudioSegment
 
 app = Flask(__name__)
 CORS(app)
@@ -19,6 +21,13 @@ openai.api_key = os.getenv("OPENAI_KEY")
 
 email_sender = SendGridAPIClient(os.getenv("SENDGRID_KEY"))
 app.config['UPLOAD_FOLDER'] = 'uploads'
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["5 per minute"],
+    storage_uri="memory://",
+)
 
 
 @app.route("/transcribe", methods=["POST"])
@@ -37,14 +46,36 @@ def transcribe_and_send_email():
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
         file.save(upload_path)
 
-        full_transcript = transcribe(upload_path)
-        transcription = meeting_minutes(full_transcript)
-        send_email(email, transcription, full_transcript)
+        executor.submit(process_transcription, upload_path, email)
 
         return jsonify({"message": "Transcription request submitted successfully"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({"error": str(e)}), 429
+
+
+def process_transcription(upload_path, email):
+    try:
+        with app.app_context():
+            full_transcript = transcribe(upload_path)
+
+            if not full_transcript:
+                raise Exception("Transcription failed")
+
+            summary = meeting_minutes(full_transcript)
+
+            if not summary:
+                raise Exception("Summary generation failed")
+
+            send_email(email, summary, full_transcript)
+
+    except Exception as e:
+        print(f"Error in transcription process: {str(e)}")
 
 
 def send_email(recipient, transcription_info, transcript):
@@ -97,12 +128,11 @@ def transcribe(file_path):
                 transcriptions_segments.append(transcription['text'])
                 os.remove(segment_path)
 
-            full_transcript = ' '.join(transcriptions_segments)
             os.remove(file_path)
-            return full_transcript
+            return ' '.join(transcriptions_segments)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return str(e)
 
 
 def meeting_minutes(transcription):
