@@ -1,116 +1,111 @@
-# Audio Transcriber Backend
+# TalkToText Backend
 
-This is the README for the Audio Transcriber Backend, which is a Flask-based application that transcribes audio files and sends the transcription via email. The backend also performs additional processing on the transcription, including summarization, key point extraction, action item identification, and sentiment analysis. Below, you will find information on how to set up and use this backend.
+This is the README file for the backend of TalkToText, a service that transcribes audio and video files into text. The backend is built using Flask and integrates with various APIs and services to provide transcription functionality.
 
-## Prerequisites
+## Table of Contents
 
-Before you can run the Audio Transcriber Backend, make sure you have the following prerequisites installed:
+- [Introduction](#introduction)
+- [Getting Started](#getting-started)
+   - [Prerequisites](#prerequisites)
+   - [Installation](#installation)
+- [Usage](#usage)
+   - [Transcribing Audio/Video](#transcribing-audiovideo)
+   - [Email Notifications](#email-notifications)
+- [API Endpoints](#api-endpoints)
+- [Configuration](#configuration)
+- [Error Handling](#error-handling)
+- [Contributing](#contributing)
+- [License](#license)
 
-- Python 3.x
-- Flask
-- Flask-CORS
-- SendGrid Python Library
-- OpenAI Python Library
-- PyDub
-- Python `dotenv` library
+## Introduction
 
-You also need to set up accounts and obtain API keys for the following services:
+TalkToText is a service that allows users to transcribe audio and video files into text. The backend of TalkToText is responsible for handling user requests, processing audio/video files, performing transcriptions, and sending email notifications to users with the transcribed content.
 
-- [OpenAI](https://beta.openai.com/signup/)
-- [SendGrid](https://sendgrid.com/)
+The backend utilizes various libraries and services, including Flask, MongoDB, GridFS, SendGrid, and OpenAI's GPT-3 for transcription and summarization.
 
-Once you have these prerequisites, replace the placeholders in your `.env` file with your actual API keys.
+## Getting Started
 
-## Installation
+### Prerequisites
 
-1. Clone this repository to your local machine.
+Before running the TalkToText backend, you'll need to have the following prerequisites installed:
 
-   ```bash
-   git clone https://github.com/GiridharRNair/AudioTranscribe.git
+- Python 3.7 or higher
+- MongoDB
+- OpenAI GPT-3 API Key
+- SendGrid API Key
+
+### Installation
+
+1. Clone the TalkToText repository:
+
+   ```shell
+   git clone https://github.com/your-username/AudioTranscribe.git
    ```
 
-2. Navigate to the project directory.
+2. Change to the project directory:
 
-   ```bash
-   cd AudioTranscribe
+   ```shell
+   cd TalkToText-backend
    ```
 
-3. Create a virtual environment (recommended).
+3. Install the required Python packages:
 
-   ```bash
-   python -m venv venv
-   ```
-
-4. Activate the virtual environment.
-
-    - On Windows:
-
-      ```bash
-      venv\Scripts\activate
-      ```
-
-    - On macOS and Linux:
-
-      ```bash
-      source venv/bin/activate
-      ```
-
-5. Install the required dependencies.
-
-   ```bash
+   ```shell
    pip install -r requirements.txt
    ```
 
+4. Set up environment variables by creating a `.env` file and adding the necessary API keys and configuration:
+
+   ```env
+   MONGO_URI=your-mongodb-uri
+   OPENAI_KEY=your-openai-api-key
+   SENDGRID_KEY=your-sendgrid-api-key
+   ```
+
+5. Start the Flask application:
+
+   ```shell
+   python application.py
+   ```
+
+The backend should now be running at `http://127.0.0.1:5000`.
+
 ## Usage
 
-1. Start the Flask server by running the following command:
+### Transcribing Audio/Video
 
-   ```bash
-   python app.py
-   ```
+To transcribe an audio or video file, you can send a POST request to the `/transcribe` endpoint. You need to include the following data in your request:
 
-   The server will start at `http://localhost:5000`.
+- `email`: The email address where you want to receive the transcription.
+- `file`: The audio or video file to be transcribed.
 
-2. Make a POST request to the `/transcribe` endpoint with the following data:
+The backend will process the file, perform the transcription, and send an email to the provided address with a link to access the transcription.
 
-    - `email`: The recipient's email address.
-    - `audio_file`: The audio file to be transcribed (supported formats: mp3, mp4, mpeg, wav, flac, ogg, mpga, m4a, webm).
+### Email Notifications
 
-   Example using `curl`:
+The backend uses SendGrid to send email notifications to users. Make sure you have configured SendGrid with a valid API key and sender email address.
 
-   ```bash
-   curl -X POST -F "email=recipient@example.com" -F "audio_file=@/path/to/audio/file.wav" http://localhost:5000/transcribe
-   ```
+## API Endpoints
 
-   This will submit a transcription request. The backend will transcribe the audio, summarize it, extract key points, identify action items, and perform sentiment analysis on the transcription. The results will be emailed to the provided email address.
+- `/transcribe` (POST): Transcribes an audio or video file and sends an email notification to the user with the transcription link.
+- `/<user_id>/validate` (GET): Initiates the transcription process for a specific user, converts the audio, and sends email notifications.
 
-## Supported Audio Formats
+## Configuration
 
-The backend supports the following audio formats for transcription:
+You can configure the backend by modifying the environment variables in the `.env` file. Some important configuration options include:
 
-- mp3
-- mp4
-- mpeg
-- wav
-- flac
-- ogg
-- mpga
-- m4a
-- webm
-
-## Customization
-
-- You can customize the AI models used for summarization, key point extraction, action item identification, and sentiment analysis by modifying the respective functions in the `app.py` file.
-- You can also customize the email sender's address and the subject line for the email in the `send_email` function.
+- `MONGO_URI`: The MongoDB URI for database storage.
+- `OPENAI_KEY`: Your OpenAI GPT-3 API key.
+- `SENDGRID_KEY`: Your SendGrid API key.
 
 ## Error Handling
 
-- The backend provides error handling for missing required fields, invalid file formats, and internal server errors. Error messages are returned as JSON responses.
+The backend handles various error scenarios, such as missing required fields, unsupported file formats, and internal server errors. It returns appropriate JSON responses with error messages and status codes to inform the client of any issues.
 
-## Deployment
+## Contributing
 
-For deployment in a production environment, it is recommended to use a production-ready web server like Gunicorn or uWSGI behind a reverse proxy (e.g., Nginx). Ensure proper security measures are in place, such as securing API keys and setting up authentication.
+We welcome contributions to the TalkToText project. If you'd like to contribute, please fork the repository, make your changes, and submit a pull request.
 
 ## License
 
-This project is licensed under the [MIT](https://choosealicense.com/licenses/mit/) License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
