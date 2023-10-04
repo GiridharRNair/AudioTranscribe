@@ -80,7 +80,7 @@ def send_email(recipient, transcription_info, transcript):
         email_sender.send(message)
         print("Transcription successful")
     except Exception as e:
-        print({"error": str(e)})
+        print(str(e))
 
 
 def meeting_minutes(transcription):

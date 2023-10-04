@@ -5,7 +5,6 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from flask_limiter import Limiter
-from moviepy.editor import VideoFileClip
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 from sendgrid import SendGridAPIClient, Mail
@@ -21,6 +20,7 @@ load_dotenv()
 media_folder = 'VideoAudioFiles'
 os.makedirs(media_folder, exist_ok=True)
 application.config['VideoAudioFiles'] = media_folder
+# application.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB / 1 GIG
 email_sender = SendGridAPIClient(os.getenv("SENDGRID_KEY"))
 mongo_client = MongoClient(os.environ.get('MONGO_URI'))
 db = mongo_client.TalkToText
@@ -50,10 +50,8 @@ def transcribe_request():
         upload_path = os.path.join(application.config[media_folder], filename)
         file.save(upload_path)
 
-        if is_audio_file(filename):
+        if accepted_file_ext(filename):
             audio_id = fs.put(file, filename=filename)
-        elif is_video_file(filename):
-            audio_id = convert_video_to_audio(upload_path, filename)
         else:
             return jsonify({"error": "Invalid File Format"}), 401
 
@@ -66,7 +64,7 @@ def transcribe_request():
         return jsonify({"message": "Check Your Email"}), 200
 
     except Exception as e:
-        return jsonify({"error": e}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 @application.route('/<user_id>/validate', methods=['GET'])
@@ -104,28 +102,9 @@ def ratelimit_handler(e):
     return jsonify({"error": str(e)}), 429
 
 
-def is_audio_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[-1] in {'mp3', 'wav', 'ogg', 'flac', 'm4a', 'mpga'}
-
-
-def is_video_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[-1] in {'mp4', 'mpeg', 'webm'}
-
-
-def convert_video_to_audio(video_path, original_filename):
-    audio_file_path = os.path.join(application.config[media_folder], f"{os.path.splitext(original_filename)[0]}.mp3")
-
-    video_clip = VideoFileClip(video_path)
-    audio_clip = video_clip.audio
-    audio_clip.write_audiofile(audio_file_path, codec='mp3')
-
-    with open(audio_file_path, "rb") as audio_file:
-        audio_id = fs.put(audio_file, filename=os.path.splitext(original_filename)[0] + ".mp3")
-
-    os.remove(video_path)
-    os.remove(audio_file_path)
-
-    return audio_id
+def accepted_file_ext(filename):
+    file_ext = {'mp3', 'wav', 'ogg', 'flac', 'm4a', 'mpga', 'mp4', 'mpeg', 'webm'}
+    return '.' in filename and filename.rsplit('.', 1)[-1] in file_ext
 
 
 def send_email(subject, recipient, email_content):
