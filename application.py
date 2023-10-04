@@ -20,9 +20,10 @@ load_dotenv()
 media_folder = 'VideoAudioFiles'
 os.makedirs(media_folder, exist_ok=True)
 application.config['VideoAudioFiles'] = media_folder
-# application.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB / 1 GIG
-email_sender = SendGridAPIClient(os.getenv("SENDGRID_KEY"))
+application.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB
+email_sender = SendGridAPIClient(os.environ.get("SENDGRID_KEY"))
 mongo_client = MongoClient(os.environ.get('MONGO_URI'))
+domain = os.environ.get('DOMAIN')
 db = mongo_client.TalkToText
 user_info_collection = db["files"]
 fs = gridfs.GridFS(db)
@@ -47,9 +48,6 @@ def transcribe_request():
 
         filename = secure_filename(file.filename)
 
-        upload_path = os.path.join(application.config[media_folder], filename)
-        file.save(upload_path)
-
         if accepted_file_ext(filename):
             audio_id = fs.put(file, filename=filename)
         else:
@@ -58,7 +56,7 @@ def transcribe_request():
         user_info_collection.insert_one({"email": email, "user_id": user_uuid, "audio_id": audio_id})
 
         send_email('Audio Transcription Request', email, f'Click here to get your transcription: <a '
-                                                         f'href="http://127.0.0.1:5000/{user_uuid}/validate">Here</a>'
+                                                         f'href="{domain}/{user_uuid}/validate">Here</a>'
                                                          f"<br /><br /> If you didn't expect this email, just ignore.")
 
         return jsonify({"message": "Check Your Email"}), 200
@@ -91,7 +89,8 @@ def transcribe(user_id):
         fs.delete(user["audio_id"])
         user_info_collection.delete_one({'user_id': user_id})
 
-        return jsonify({"message": "Transcription initiated successfully"}), 200
+        return jsonify({"message": "Transcription initiated successfully. "
+                                   "You will receive an email with your transcription soon."}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
