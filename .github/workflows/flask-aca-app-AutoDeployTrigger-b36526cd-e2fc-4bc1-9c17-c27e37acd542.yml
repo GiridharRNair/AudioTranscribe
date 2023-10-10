@@ -1,0 +1,42 @@
+name: Trigger auto deployment for flask-aca-app
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/flask-aca-app-AutoDeployTrigger-b36526cd-e2fc-4bc1-9c17-c27e37acd542.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:
+      
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.FLASKACAAPP_AZURE_CREDENTIALS }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: ca6719ee6cd6acr.azurecr.io
+          registryUsername: ${{ secrets.FLASKACAAPP_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.FLASKACAAPP_REGISTRY_PASSWORD }}
+          containerAppName: flask-aca-app
+          resourceGroup: flask-aca-rg
+          imageToBuild: ca6719ee6cd6acr.azurecr.io/flask-aca-app:${{ github.sha }}
+          
+
+     
+
