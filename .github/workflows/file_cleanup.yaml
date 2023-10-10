@@ -25,4 +25,4 @@ jobs:
       - name: Execute Python script
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
-        run: python daily_email_distribution.py
+        run: python file_cleanup.py
