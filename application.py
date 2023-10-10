@@ -55,9 +55,9 @@ def transcribe_request():
 
         user_info_collection.insert_one({"email": email, "user_id": user_uuid, "audio_id": audio_id})
 
-        send_email('Audio Transcription Request', email, f'Click here to get your transcription: <a '
-                                                         f'href="{domain}/{user_uuid}/validate">Here</a>'
-                                                         f"<br /><br /> If you didn't expect this email, just ignore.")
+        send_email('Audio Transcription Request', email, f'Click here to get your transcription of {file.filename}: '
+                                                         f'<a href="{domain}/{user_uuid}/validate">Here</a><br/><br/>'
+                                                         f"If you didn't expect this email, just ignore.")
 
         return jsonify({"message": "Check Your Email"}), 200
 
