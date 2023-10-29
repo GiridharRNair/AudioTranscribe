@@ -40,7 +40,7 @@ The Dockerfile for building the Docker image of the application. It installs dep
 
 A GitHub Actions workflow file for scheduling the daily execution of the `file_cleanup.py` script to clean up MongoDB files.
 
-### `.github/workflows/flask-aca-app-AutoDeployTrigger-b36526cd-e2fc-4bc1-9c17-c27e37acd542.yml`
+### `flask-aca-app-AutoDeployTrigger-b268d033-aee1-4490-9c39-7c8cc9038708.yml`
 
 A GitHub Actions workflow file for triggering automatic deployments of the Flask application to Azure Container App when changes are pushed to the main branch.
 
